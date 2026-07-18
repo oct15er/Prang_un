@@ -1,59 +1,182 @@
-<div>Teachable Machine Image Model</div>
-<button type="button" onclick="init()">Start</button>
-<div id="webcam-container"></div>
-<div id="label-container"></div>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
-<script type="text/javascript">
-    // More API functions here:
-    // https://github.com/googlecreativelab/teachablemachine-community/tree/master/libraries/image
-
-    // the link to your model provided by Teachable Machine export panel
-    const URL = "https://teachablemachine.withgoogle.com/models/sTNuZRwP0/";
-
-    let model, webcam, labelContainer, maxPredictions;
-
-    // Load the image model and setup the webcam
-    async function init() {
-        const modelURL = URL + "model.json";
-        const metadataURL = URL + "metadata.json";
-
-        // load the model and metadata
-        // Refer to tmImage.loadFromFiles() in the API to support files from a file picker
-        // or files from your local hard drive
-        // Note: the pose library adds "tmImage" object to your window (window.tmImage)
-        model = await tmImage.load(modelURL, metadataURL);
-        maxPredictions = model.getTotalClasses();
-
-        // Convenience function to setup a webcam
-        const flip = true; // whether to flip the webcam
-        webcam = new tmImage.Webcam(200, 200, flip); // width, height, flip
-        await webcam.setup(); // request access to the webcam
-        await webcam.play();
-        window.requestAnimationFrame(loop);
-
-        // append elements to the DOM
-        document.getElementById("webcam-container").appendChild(webcam.canvas);
-        labelContainer = document.getElementById("label-container");
-        for (let i = 0; i < maxPredictions; i++) { // and class labels
-            labelContainer.appendChild(document.createElement("div"));
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Image Classification - Cute & Minimal</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Mitr:wght@300;400;500;600&display=swap');
+        body {
+            font-family: 'Mitr', sans-serif;
+            background: linear-gradient(135deg, #fff1f2 0%, #fae8ff 100%);
         }
-    }
-
-    async function loop() {
-        webcam.update(); // update the webcam frame
-        await predict();
-        window.requestAnimationFrame(loop);
-    }
-
-    // run the webcam image through the image model
-    async function predict() {
-        // predict can take in an image, video or canvas html element
-        const prediction = await model.predict(webcam.canvas);
-        for (let i = 0; i < maxPredictions; i++) {
-            const classPrediction =
-                prediction[i].className + ": " + prediction[i].probability.toFixed(2);
-            labelContainer.childNodes[i].innerHTML = classPrediction;
+        #webcam-container canvas {
+            width: 100% !important;
+            height: auto !important;
+            border-radius: 1rem;
+            box-shadow: 0 4px 12px rgba(139, 92, 26, 0.08);
+            transform: scaleX(-1);
         }
-    }
-</script>
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4 text-[#5c4033]">
+
+    <div class="max-w-4xl w-full bg-white/80 backdrop-blur-md rounded-3xl border border-[#eedece] p-6 md:p-8 shadow-xl shadow-rose-100/40">
+        
+        <div class="text-center mb-8">
+            <h1 class="text-2xl md:text-3xl font-semibold text-[#6c4e31]">
+                Teachable Machine AI
+            </h1>
+            <p class="text-[#a18276] mt-1.5 text-xs md:text-sm tracking-wide">วิเคราะห์รูปภาพอัตโนมัติ ทุกๆ 3 วินาที</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+            
+            <!-- Left Side: Webcam View -->
+            <div class="flex flex-col items-center bg-[#fdf8f5] p-5 rounded-2xl border border-[#f3e8e0]">
+                <div class="relative w-full aspect-square max-w-[280px] bg-[#f5ebe6] rounded-2xl flex items-center justify-center border border-[#ebdcd0] overflow-hidden">
+                    <div id="webcam-placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-[#c4a497] p-4 text-center">
+                        <svg class="w-10 h-10 mb-2 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                        <span class="text-xs font-light">กดปุ่มด้านล่างเพื่อเปิดกล้อง</span>
+                    </div>
+                    <div id="webcam-container" class="w-full h-full z-10"></div>
+                </div>
+
+                <button type="button" onclick="init()" id="start-btn" class="mt-6 w-full max-w-[280px] px-6 py-3 bg-[#f43f5e] hover:bg-[#e11d48] active:scale-[0.98] text-white font-medium rounded-xl shadow-md shadow-rose-200 transition-all duration-200 flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <span class="text-sm">เริ่มระบบตรวจจับ</span>
+                </button>
+            </div>
+
+            <!-- Right Side: Results -->
+            <div class="space-y-6">
+                <div class="bg-[#fdf8f5] p-5 rounded-2xl border border-[#f3e8e0]">
+                    <div class="flex justify-between items-center mb-5">
+                        <h2 class="text-base font-medium text-[#6c4e31] flex items-center gap-2">
+                            <span class="flex h-2.5 w-2.5 relative">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                                <span id="status-dot" class="relative inline-flex rounded-full h-2.5 w-2.5 bg-gray-300"></span>
+                            </span>
+                            ผลการวิเคราะห์
+                        </h2>
+                        <span id="countdown" class="text-xs text-[#a18276] bg-[#f5ebe6] px-2.5 py-1 rounded-full border border-[#ebdcd0]">
+                            รอเริ่มระบบ
+                        </span>
+                    </div>
+
+                    <div id="label-container" class="space-y-4">
+                        <div class="text-[#c4a497] text-center py-8 text-xs font-light">
+                            กล้องยังไม่ได้เปิดใช้งานน้า...
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- บล็อกนี้แหละที่ห้ามหายเด็ดขาด!! -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+
+    <script type="text/javascript">
+        const URL = "https://teachablemachine.withgoogle.com/models/sTNuZRwP0/";
+
+        let model, webcam, labelContainer, maxPredictions;
+        let lastPredictTime = 0;
+        const PREDICT_INTERVAL = 3000;
+
+        async function init() {
+            const startBtn = document.getElementById("start-btn");
+            startBtn.disabled = true;
+            startBtn.innerHTML = `
+                <svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                <span class="text-sm">กำลังโหลด...</span>
+            `;
+
+            const modelURL = URL + "model.json";
+            const metadataURL = URL + "metadata.json";
+
+            try {
+                model = await tmImage.load(modelURL, metadataURL);
+                maxPredictions = model.getTotalClasses();
+
+                const flip = true; 
+                webcam = new tmImage.Webcam(280, 280, flip);
+                await webcam.setup();
+                await webcam.play();
+                
+                document.getElementById("webcam-placeholder").classList.add("hidden");
+                document.getElementById("webcam-container").appendChild(webcam.canvas);
+                
+                labelContainer = document.getElementById("label-container");
+                labelContainer.innerHTML = ""; 
+
+                for (let i = 0; i < maxPredictions; i++) {
+                    const barGroup = document.createElement("div");
+                    barGroup.className = "space-y-1.5";
+                    barGroup.innerHTML = `
+                        <div class="flex justify-between text-xs font-medium">
+                            <span class="text-[#6c4e31] class-name">กำลังประมวลผล...</span>
+                            <span class="text-[#a18276] class-percentage">0%</span>
+                        </div>
+                        <div class="w-full bg-[#f5ebe6] h-2 rounded-full overflow-hidden">
+                            <div class="bg-gradient-to-r from-[#fda4af] to-[#f43f5e] h-2 rounded-full transition-all duration-500 progress-bar" style="width: 0%"></div>
+                        </div>
+                    `;
+                    labelContainer.appendChild(barGroup);
+                }
+
+                document.getElementById("status-dot").className = "relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500";
+                startBtn.className = "mt-6 w-full max-w-[280px] px-6 py-3 bg-[#e8ded1] text-[#a18276] font-medium rounded-xl cursor-not-allowed text-center text-sm";
+                startBtn.innerHTML = "ระบบกำลังทำงาน";
+
+                window.requestAnimationFrame(loop);
+
+            } catch (error) {
+                alert("เกิดข้อผิดพลาด: " + error);
+                startBtn.disabled = false;
+                startBtn.innerHTML = "ลองใหม่อีกครั้ง";
+            }
+        }
+
+        async function loop(timestamp) {
+            webcam.update();
+            
+            if (lastPredictTime !== 0) {
+                const timePassed = timestamp - lastPredictTime;
+                const timeLeft = Math.max(0, Math.ceil((PREDICT_INTERVAL - timePassed) / 1000));
+                document.getElementById("countdown").innerText = `ตรวจจับใน ${timeLeft} วิ`;
+            } else {
+                document.getElementById("countdown").innerText = `เริ่มแล้ว`;
+            }
+
+            if (!lastPredictTime || timestamp - lastPredictTime >= PREDICT_INTERVAL) {
+                lastPredictTime = timestamp;
+                await predict();
+            }
+
+            window.requestAnimationFrame(loop);
+        }
+
+        async function predict() {
+            const prediction = await model.predict(webcam.canvas);
+            
+            for (let i = 0; i < maxPredictions; i++) {
+                const className = prediction[i].className;
+                const probability = prediction[i].probability;
+                const percentageStr = (probability * 100).toFixed(0) + "%";
+
+                const targetNode = labelContainer.childNodes[i];
+                if (targetNode) {
+                    targetNode.querySelector(".class-name").innerText = className;
+                    targetNode.querySelector(".class-percentage").innerText = percentageStr;
+                    targetNode.querySelector(".progress-bar").style.width = percentageStr;
+                }
+            }
+        }
+    </script>
+</body>
+</html>
